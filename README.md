@@ -14,7 +14,8 @@ Dependencies and Support
 Although there are no hard dependencies, there is a long list of optional dependencies, which enable various features: 
 * default is necessary to craft most ammo types, and provides obsidian shards and mese crystal fragments as slingshot ammo.
 * hardtrees enables rocks for slingshots. 
-* mesecons enable slingshotted mese crystal fragments to power mesecon effectors. 
+* mesecons enable slingshotted mese crystal fragments to power mesecon effectors.
+* farming provides string for basic bows and slingshots.
 * fire enables fire arrows, and TNT enables bomb arrows. 
 * basic_materials provides craftability for steel bows and slingshots.
 * animalmaterials (mobf), creatures (mob engine), or mobs (mobs_redo) provide feathers usable in crafting arrows. Any one mod will do.
