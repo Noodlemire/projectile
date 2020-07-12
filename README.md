@@ -12,11 +12,12 @@ This mod adds a couple slingshots and bows, which fire projectiles that use the 
 Dependencies and Support
 -------------------------------------------------------------------------------------------------------------
 Although there are no hard dependencies, there is a long list of optional dependencies, which enable various features: 
-* Default is necessary to craft most ammo types, and provides obsidian shards and mese crystal fragments as slingshot ammo.
-* Hardtrees enables rocks for slingshots. 
-* Mesecons enable slingshotted mese crystal fragments to power mesecon effectors. 
-* Fire enables fire arrows, and TNT enables bomb arrows. 
-* Basic_materials provides craftability for steel bows and slingshots.
+* default is necessary to craft most ammo types, and provides obsidian shards and mese crystal fragments as slingshot ammo.
+* hardtrees enables rocks for slingshots. 
+* mesecons enable slingshotted mese crystal fragments to power mesecon effectors. 
+* fire enables fire arrows, and TNT enables bomb arrows. 
+* basic_materials provides craftability for steel bows and slingshots.
+* animalmaterials (mobf), creatures (mob engine), or mobs (mobs_redo) provide feathers usable in crafting arrows. Any one mod will do.
 
 -------------------------------------------------------------------------------------------------------------
 License
