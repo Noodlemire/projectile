@@ -404,7 +404,7 @@ end
 
 --Basic flintlock ammunition with decent damage, and extremely high speed, and slight spread.
 projectile.register_projectile("projectile:musket_ball", "flintlock", "projectile:musket_ball", {
-	damage = 10,
+	damage = 15,
 	speed = 250,
 	spread = 2.5,
 
@@ -428,10 +428,10 @@ projectile.register_projectile("projectile:musket_ball_diamond", "flintlock", "p
 		for _, target in pairs(minetest.get_objects_inside_radius(pos, 2.5)) do
 			--As long as this wouldn't be self-damage or friendly fire...
 			if not target:is_player() or (self.owner ~= target:get_player_name() and projectile.in_same_party(self, target)) then
-				--Punch that target for 6 damage.
+				--Punch that target for 9 damage.
 				--The direction is just 0, so affected targets won't be knocked anywhere.
 				--Instead, they'll just freeze in place for a moment.
-				target:punch(self.object, 1, {full_punch_interval = 1, damage_groups = {fleshy = 6}}, {x=0, y=0, z=0})
+				target:punch(self.object, 1, {full_punch_interval = 1, damage_groups = {fleshy = 9}}, {x=0, y=0, z=0})
 			end
 		end
 
@@ -450,9 +450,9 @@ projectile.register_projectile("projectile:musket_ball_diamond", "flintlock", "p
 	end
 })
 
---An upgrade to the musket ball that deals nearly double damage and is slightly faster and more accurate.
+--An upgrade to the musket ball that deal a lot more damage and is slightly faster and more accurate.
 projectile.register_projectile("projectile:musket_ball_mithril", "flintlock", "projectile:musket_ball_mithril", {
-	damage = 18,
+	damage = 24,
 	speed = 300,
 	spread = 2,
 
@@ -461,7 +461,7 @@ projectile.register_projectile("projectile:musket_ball_mithril", "flintlock", "p
 
 --A standard shotgun blast, with smaller than average pellets that basically tickle enemies if only one or two land.
 projectile.register_projectile("projectile:shot_pile", "flintlock_shot", "projectile:shot_pile", {
-	damage = 3,
+	damage = 4,
 	speed = 250,
 	count = 9,
 	spread = 22.5,
@@ -477,7 +477,7 @@ projectile.register_projectile("projectile:shot_pile", "flintlock_shot", "projec
 
 --A massive burst of shot that deals less damage at range, but much more damage up close. Has a lot wider spread as well.
 projectile.register_projectile("projectile:shot_pile_diamond", "flintlock_shot", "projectile:shot_pile_diamond", {
-	damage = 2,
+	damage = 3,
 	speed = 275,
 	count = 18,
 	spread = 30,
@@ -493,7 +493,7 @@ projectile.register_projectile("projectile:shot_pile_diamond", "flintlock_shot",
 
 --Stronger shot than steel with nearly double the damage and slightly better speed as well.
 projectile.register_projectile("projectile:shot_pile_mithril", "flintlock_shot", "projectile:shot_pile_mithril", {
-	damage = 5,
+	damage = 6,
 	speed = 300,
 	count = 9,
 	spread = 22.5,
