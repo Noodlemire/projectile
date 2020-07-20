@@ -1,0 +1,22 @@
+v1.1.0:
+	Added flintlock weapons:
+		+Flintlock pistols, muskets, and blunderbusses
+		+Optional dependencies on mesecons_walllever, moreores, and pipeworks for crafting recipes.
+		Required musket balls as ammo, crafted from steel, diamond, or mithril.
+		Blunderbusses require shot piles, crafted from three musket balls.
+		Each requires gunpowder in order to fire, in addition to ammunition.
+		They have a loading period similar to bows and slingshots, but cannot be fired until fully charged.
+
+	Parties:
+		+Optional dependency for the new parties mod by Zughy
+		+As long as two players are in the same party, their projectiles cannot hurt each other.
+
+	Misc:
+		+Added an api.txt to describe functions that other mods can use to create their own projectile weapons.
+		+Normal arrows now light on fire if they pass through fire or lava.
+		+Fire arrows now extinguish if they pass through water.
+
+	Fixes:
+		-Issues with weapons thinking they're still charged if the player leaves the game, even though they shouldn't be.
+		-Possible crash if a projectile ever called self.object:remove() in its _on_step function.
+		-Dead players will no longer block projectiles.

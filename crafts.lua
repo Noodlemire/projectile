@@ -24,12 +24,10 @@ minetest.register_craftitem("projectile:arrow", {
 })
 
 --An arrow that burns flammable nodes that it touches
-if fire then
-	minetest.register_craftitem("projectile:arrow_fire", {
-		description = "Fire Arrow",
-		inventory_image = "projectile_arrow_fire.png",
-	})
-end
+minetest.register_craftitem("projectile:arrow_fire", {
+	description = "Fire Arrow",
+	inventory_image = "projectile_arrow_fire.png",
+})
 
 --An arrow with exceptionally high velocity
 minetest.register_craftitem("projectile:arrow_high_velocity", {
@@ -38,12 +36,46 @@ minetest.register_craftitem("projectile:arrow_high_velocity", {
 })
 
 --An arrow that explodes on contact, rather than dealing direct damage.
-if tnt then
-	minetest.register_craftitem("projectile:arrow_bomb", {
-		description = "Bomb Arrow",
-		inventory_image = "projectile_arrow_bomb.png",
-	})
-end
+minetest.register_craftitem("projectile:arrow_bomb", {
+	description = "Bomb Arrow",
+	inventory_image = "projectile_arrow_bomb.png",
+})
+
+--Basic flintlock ammo, small steel balls
+minetest.register_craftitem("projectile:musket_ball", {
+	description = "Musket Ball",
+	inventory_image = "projectile_musket_ball.png",
+})
+
+--Easily shattered ammo with less direct damage than a musket ball, but much greater crowd control abilities.
+minetest.register_craftitem("projectile:musket_ball_diamond", {
+	description = "Diamond Musket Ball",
+	inventory_image = "projectile_musket_ball_diamond.png",
+})
+
+--An upgrade to regular musket balls
+minetest.register_craftitem("projectile:musket_ball_mithril", {
+	description = "Mithril Musket Ball",
+	inventory_image = "projectile_musket_ball_mithril.png",
+})
+
+--Standard shotgun ammo, a pile of 9 tiny balls
+minetest.register_craftitem("projectile:shot_pile", {
+	description = "Shot Pile",
+	inventory_image = "projectile_shot_pile.png",
+})
+
+--Easily shattered ammo with less direct damage than shot, but each ball splits into 2 in the initial blast, causing a total of 18 pellets to be spewed.
+minetest.register_craftitem("projectile:shot_pile_diamond", {
+	description = "Diamond Shot Pile",
+	inventory_image = "projectile_shot_pile_diamond.png",
+})
+
+--An upgrade to regular shot.
+minetest.register_craftitem("projectile:shot_pile_mithril", {
+	description = "Mithril Shot Pile",
+	inventory_image = "projectile_shot_pile_mithril.png",
+})
 
 
 
@@ -69,9 +101,9 @@ minetest.register_craft({
 minetest.register_craft({
 	output = "projectile:slingshot",
 	recipe = {
-		{"", "default:stick", "farming:string"},
-		{"", "default:stick", "default:stick"},
-		{"default:stick", "", ""}
+		{"", "group:stick", "farming:string"},
+		{"", "group:stick", "group:stick"},
+		{"group:stick", "", ""}
 	}
 })
 
@@ -90,8 +122,8 @@ minetest.register_craft({
 minetest.register_craft({
 	output = "projectile:bow",
 	recipe = {
-		{"default:stick", "default:stick", "farming:string"},
-		{"default:stick", "farming:string", ""},
+		{"group:stick", "group:stick", "farming:string"},
+		{"group:stick", "farming:string", ""},
 		{"farming:string", "", ""}
 	}
 })
@@ -107,6 +139,38 @@ minetest.register_craft({
 	}
 })
 
+--Flintlocks are made from metal and steel, with a pipe segment for the barrel and a lever for the trigger.
+minetest.register_craft({
+	output = "projectile:flintlock_pistol",
+	recipe = {
+		{"pipeworks:pipe_1_empty", ""},
+		{"mesecons_walllever:wall_lever_off", "default:steel_ingot"},
+		{"group:stick", ""}
+	}
+})
+
+--Muskets add an extra barrel because they're long.
+minetest.register_craft({
+	output = "projectile:musket",
+	recipe = {
+		{"pipeworks:pipe_1_empty", "", ""},
+		{"", "pipeworks:pipe_1_empty", "default:steel_ingot"},
+		{"", "mesecons_walllever:wall_lever_off", "group:stick"}
+	}
+})
+
+--Blunderbusses are thucker, so a second steel ingot is used in place of a pipe segment.
+minetest.register_craft({
+	output = "projectile:blunderbuss",
+	recipe = {
+		{"default:steel_ingot", ""},
+		{"mesecons_walllever:wall_lever_off", "default:steel_ingot"},
+		{"group:stick", ""}
+	}
+})
+
+
+
 --Regular arrows are made from flint, a stick, and a feather.
 --The feather can be provided by multiple mob mods.
 --Arrows are also materials in the stronger ammo options for bows.
@@ -114,7 +178,7 @@ minetest.register_craft({
 	output = "projectile:arrow",
 	recipe = {
 		{"default:flint", "", ""},
-		{"", "default:stick", ""},
+		{"", "group:stick", ""},
 		{"", "", "mobs:chicken_feather"}
 	}
 })
@@ -122,7 +186,7 @@ minetest.register_craft({
 	output = "projectile:arrow",
 	recipe = {
 		{"default:flint", "", ""},
-		{"", "default:stick", ""},
+		{"", "group:stick", ""},
 		{"", "", "animalmaterials:feather"}
 	}
 })
@@ -130,19 +194,17 @@ minetest.register_craft({
 	output = "projectile:arrow",
 	recipe = {
 		{"default:flint", "", ""},
-		{"", "default:stick", ""},
+		{"", "group:stick", ""},
 		{"", "", "creatures:feather"}
 	}
 })
 
 --Combining an arrow with a torch lights it on fire.
-if fire then
-	minetest.register_craft({
-		type = "shapeless",
-		output = "projectile:arrow_fire",
-		recipe = {"projectile:arrow", "default:torch"}
-	})
-end
+minetest.register_craft({
+	type = "shapeless",
+	output = "projectile:arrow_fire",
+	recipe = {"projectile:arrow", "default:torch"}
+})
 
 --Gold tools are often fast, so gold arrows focus on being fast.
 --A gold ingot can turn four arrows gold.
@@ -157,4 +219,47 @@ minetest.register_craft({
 	type = "shapeless",
 	output = "projectile:arrow_bomb",
 	recipe = {"projectile:arrow", "tnt:tnt_stick"}
+})
+
+--Converting applicable materials to 12 musket balls requires putting 4 of those materials into a ball-esque shape.
+minetest.register_craft({
+	output = "projectile:musket_ball 12",
+	recipe = {
+		{"", "default:steel_ingot", ""},
+		{"default:steel_ingot", "", "default:steel_ingot"},
+		{"", "default:steel_ingot", ""},
+	}
+})
+minetest.register_craft({
+	output = "projectile:musket_ball_diamond 12",
+	recipe = {
+		{"", "default:diamond", ""},
+		{"default:diamond", "", "default:diamond"},
+		{"", "default:diamond", ""},
+	}
+})
+minetest.register_craft({
+	output = "projectile:musket_ball_mithril 12",
+	recipe = {
+		{"", "moreores:mithril_ingot", ""},
+		{"moreores:mithril_ingot", "", "moreores:mithril_ingot"},
+		{"", "moreores:mithril_ingot", ""},
+	}
+})
+
+--3 of any musket ball can be split into 9 smaller balls, known as a shot pile.
+minetest.register_craft({
+	type = "shapeless",
+	output = "projectile:shot_pile",
+	recipe = {"projectile:musket_ball", "projectile:musket_ball", "projectile:musket_ball"}
+})
+minetest.register_craft({
+	type = "shapeless",
+	output = "projectile:shot_pile_diamond",
+	recipe = {"projectile:musket_ball_diamond", "projectile:musket_ball_diamond", "projectile:musket_ball_diamond"}
+})
+minetest.register_craft({
+	type = "shapeless",
+	output = "projectile:shot_pile_mithril",
+	recipe = {"projectile:musket_ball_mithril", "projectile:musket_ball_mithril", "projectile:musket_ball_mithril"}
 })

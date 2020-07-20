@@ -31,70 +31,32 @@ projectile.charge_levels = {}
 --MP = Mod Path
 local mp = minetest.get_modpath(minetest.get_current_modname())..'/'
 
+--In here is every publicly available function that this mod uses.
+dofile(mp.."api.lua")
+
 --In here is the registration of ammo items that this mod provides, as well as crafting recipes for weapons and ammo.
 dofile(mp.."crafts.lua")
 
 
 
---A function that creates and launches a function out of a player's side when they use a projectile weapon.
-function projectile.shoot(wep, user, level)
-	--Some useful shorthands
-	local pname = user:get_player_name()
-	local inv = user:get_inventory()
-	local def = wep:get_definition()
+--A helper function to cancel a player's charge when necessary.
+local function uncharge_player(player)
+	--Useful shorthand
+	local pname = player:get_player_name()
 
-	--A projectile isn't spawned directly inside a player, and it doesn't come from the center of the screen.
-	--It does start directly in front of the player...
-	local pos = user:get_look_dir()
-	--But then it's shifted to the right of the player, where it looks like the weapon is held.
-	pos = vector.rotate(pos, {x=0 , y = -math.pi / 4, z=0})
-	--Then it's shifted up by the player's face.
-	pos.y = 1
-	--The user's actual position is added last, to make rotating easier.
-	pos = vector.add(pos, user:get_pos())
+	--If there is charge data...
+	if projectile.charge_levels[pname] then
+		--Get store the previous slot for possible use after charge data deletion.
+		local old_slot = projectile.charge_levels[pname].slot
+		--Get the projectile weapon. get_wielded_item() can't be used, since the weapon may no longer be held.
+		local wep = player:get_inventory():get_stack("main", old_slot)
 
-	--Charge level depends on how long the player waited before firing. 1 = 100% charge.
-	level = math.min(level / def.charge_time, 1)
+		--Call the weapon's on_use function, which will cancel it.
+		wep:get_definition().on_use(wep, player, true)
 
-	--Look through each inventory slot...
-	for i = 1, inv:get_size("main") do
-		--get the stack itself
-		local ammo = inv:get_stack("main", i)
-
-		--If there is an item stack, and it's registered as an ammo type that this weapon can use...
-		if not ammo:is_empty() and projectile.registered_projectiles[def.rw_category][ammo:get_name()] then
-			--Create the projectile entity at the determined position
-			local projectile = minetest.add_entity(pos, projectile.registered_projectiles[def.rw_category][ammo:get_name()])
-			--A shorthand of the luaentity version of the projectile, where data can easily be stored
-			local luapro = projectile:get_luaentity()
-
-			--Set velocity according to the direction it was fired. Speed is determined by the weapon, ammo, and how long the weapon was charged.
-			projectile:set_velocity(vector.multiply(user:get_look_dir(), luapro.speed * level * def.speed))
-			--An acceleration of -9.81y is how gravity is applied.
-			projectile:set_acceleration({x=0, y=-9.81, z=0})
-
-			--Store level for later, to determine impact damage
-			luapro.level = level
-			--Also store the projectile's damage itself.
-			luapro.damage = def.damage
-			--The player's name is stored to prevent hitting yourself
-			--And by "hitting yourself" I mean accidentally being hit by the arrow just by firing it at a somewhat low angle, the moment it spawns.
-			luapro.owner = pname
-
-			--If the player isn't in creative mode, some weapon durability and ammo is consumed.
-			if not minetest.is_creative_enabled(pname) then
-				ammo:take_item(1)
-				inv:set_stack("main", i, ammo)
-
-				wep:add_wear(65536 / (def.durability or 100))
-			end
-
-			--Once the ammo is found, the search is stopped.
-			break
-		end
+		--Update the player's inventory with any modifications.
+		player:get_inventory():set_stack("main", old_slot, wep)
 	end
-
-	return wep
 end
 
 --Globalsteps are used to either cancel a charge if a player switches weapons, or to update the weapon sprite when charging is complete.
@@ -108,15 +70,8 @@ minetest.register_globalstep(function(dtime)
 		if projectile.charge_levels[pname] then
 			--If the player's selected hotbar slot changed...
 			if player:get_wield_index() ~= projectile.charge_levels[pname].slot then
-				--Get the projectile weapon. get_wielded_item() can't be used, since the weapon is no longer held.
-				local wep = player:get_inventory():get_stack("main", projectile.charge_levels[pname].slot)
-
-				--Replace the weapon with the uncharged version
-				wep:set_name(wep:get_definition().no_charge_name)
-				player:get_inventory():set_stack("main", projectile.charge_levels[pname].slot, wep)
-
-				--Delete the stored charge data for this player
-				projectile.charge_levels[pname] = nil
+				--Cancel their charge.
+				uncharge_player(player)
 
 			--Otherwise, as long as the player doesn't change weapon...
 			else
@@ -151,114 +106,19 @@ minetest.register_allow_player_inventory_action(function(player, action, inv, in
 	end
 end)
 
+--If a player leaves, cancel their charge.
+minetest.register_on_leaveplayer(function(player)
+	uncharge_player(player)
+end)
 
-
---This function registers a weapon able to shoot projectiles
-function projectile.register_weapon(name, def)
-	--either create a groups table for the definition, or use the provided one
-	def.groups = def.groups or {}
-	--Every projectile weapon belongs to the projectile_weapon group.
-	def.groups.projectile_weapon = 1
-
-	--Charge time defaults to 1 second
-	def.charge_time = def.charge_time or 1
-	--The weapon's damage multiplier defaults to 1.
-	def.damage = def.damage or 1
-	--The weapon's speed multiplier defaults to 1.
-	def.speed = def.speed or 1
-
-	--If this weapons has to be charged...
-	if def.charge then
-		--Define a function to reset the weapon's sprite and delete the player's charge data.
-		local uncharge = function(wep, user)
-			projectile.charge_levels[user:get_player_name()] = nil
-
-			wep:set_name(name)
-
-			return wep
-		end
-
-		--A function that begins a new charge, or fires a shot if the player is charging.
-		local charge = function(wep, user)
-			local pname = user:get_player_name()
-
-			--If there is no charge data yet...
-			if not projectile.charge_levels[pname] then
-				local inv = user:get_inventory()
-
-				--Look for ammo in the player's inventory, starting from the first slot.
-				for i = 1, inv:get_size("main") do
-					--Get the itemstack of the current slot.
-					local ammo = inv:get_stack("main", i)
-
-					--If the stack is there, and it's registered as ammo that this weapon can use...
-					if not ammo:is_empty() and projectile.registered_projectiles[def.rw_category][ammo:get_name()] then
-						--Create new charge data. Store the inventory slot of the weapon, and start the charge at 0
-						projectile.charge_levels[pname] = {slot = user:get_wield_index(), charge = 0}
-
-						--As feedback for the charge beginning, change the weapon's sprite to show it loaded.
-						--I originally wanted the item to be shown loaded with specific ammo, but it doesn't seem to be possible.
-						wep = ItemStack({name = name.."_2", wear = wep:get_wear()})
-
-						--Once ammo is found, the search can be stopped.
-						break
-					end
-				end
-
-				--If no ammo was found, a charge won't start at all. No dry-firing allowed.
-
-			--Otherwise, if there is charge data...
-			else
-				--Shoot out the projectile
-				projectile.shoot(wep, user, projectile.charge_levels[pname].charge)
-				--Then, end the charge
-				wep = uncharge(wep, user)
-			end
-
-			return wep
-		end
-
-		--Right-click to start a charge. Right-click again to fire.
-		def.on_place = charge
-		def.on_secondary_use = charge
-		--Left-click to cancel a charge without firing.
-		def.on_use = uncharge
-
-		--Start the creating of the partially and fully charged versions of this item, first by copying the definition.
-		local def2 = table.copy(def)
-		local def3 = table.copy(def)
-
-		--The partially and fully-charged versions have specific inventory images
-		def2.inventory_image = def.inventory_image_2
-		def3.inventory_image = def.inventory_image_3
-		--The projectile_weapon group rating increases with charge level
-		def2.groups.projectile_weapon = 2
-		def3.groups.projectile_weapon = 3
-		--Partially charged weapons cannot be grabbed from the creative inventory.
-		def2.groups.not_in_creative_inventory = 1
-		def3.groups.not_in_creative_inventory = 1
-
-		--Some versions store the names of different versions, for convenience.
-		--The partially-charged version stores the name of the fully charged version, to be used when transitioning to the fully charged version.
-		def2.full_charge_name = name.."_3"
-		--Full and partial charge versions can both be cancelled, so they remember the name of the uncharged version
-		def2.no_charge_name = name
-		def3.no_charge_name = name
-
-		--Finally, register the partially and fully charged projectile weapons.
-		minetest.register_tool(name.."_2", def2)
-		minetest.register_tool(name.."_3", def3)
-
-	--Otherwise, right-click simply shoots the projectile.
-	else
-		def.on_place = projectile.shoot
-		def.on_secondary_use = projectile.shoot
+--If a server is shutdown, cancel all charges.
+minetest.register_on_shutdown(function()
+	for _, player in pairs(minetest.get_connected_players()) do
+		uncharge_player(player)
 	end
+end)
 
-	--Finally, register the projectile weapon here.
-	--This is the only thing that happens regardless of if the weapon has to charge or not.
-	minetest.register_tool(name, def)
-end
+
 
 --The basic slingshot. Slingshots are weaker than bows, but the ammunition they use is way easier to find and create.
 projectile.register_weapon("projectile:slingshot",  {
@@ -268,7 +128,8 @@ projectile.register_weapon("projectile:slingshot",  {
 	inventory_image_3 = "projectile_slingshot_charged_full.png",
 	durability = 75,
 	rw_category = "slingshot",
-	charge = true
+	charge = true,
+	fire_while_charging = true
 })
 
 --An upgraded slingshot, which fires faster and harder, but is slightly harder to charge up. Metal wire is stiffer than string, after all.
@@ -280,6 +141,7 @@ projectile.register_weapon("projectile:steel_slingshot",  {
 	durability = 150,
 	rw_category = "slingshot",
 	charge = true,
+	fire_while_charging = true,
 	charge_time = 1.1,
 	damage = 1.25,
 	speed = 1.75
@@ -294,6 +156,7 @@ projectile.register_weapon("projectile:bow",  {
 	durability = 100,
 	rw_category = "bow",
 	charge = true,
+	fire_while_charging = true,
 	charge_time = 2
 })
 
@@ -306,85 +169,60 @@ projectile.register_weapon("projectile:steel_bow",  {
 	durability = 200,
 	rw_category = "bow",
 	charge = true,
+	fire_while_charging = true,
 	charge_time = 2.1,
 	damage = 1.5,
 	speed = 1.9
 })
 
+--The basic flintlock weapon, which can fire fairly often and has fair damage, but can't be fired before it is fully loaded.
+projectile.register_weapon("projectile:flintlock_pistol",  {
+	description = "Flintlock Pistol",
+	inventory_image = "projectile_flintlock_pistol.png",
+	inventory_image_2 = "projectile_flintlock_pistol.png",
+	inventory_image_3 = "projectile_flintlock_pistol_charged.png",
+	durability = 250,
+	rw_category = "flintlock",
+	charge = true,
+	charge_time = 0.667,
+
+	can_fire = projectile.needs_gunpowder,
+	on_cancel = projectile.return_gunpowder
+})
+
+--A slowler, more powerful flintlock weapon.
+projectile.register_weapon("projectile:musket",  {
+	description = "Musket",
+	inventory_image = "projectile_musket.png",
+	inventory_image_2 = "projectile_musket.png",
+	inventory_image_3 = "projectile_musket_charged.png",
+	durability = 300,
+	rw_category = "flintlock",
+	charge = true,
+	charge_time = 1.333,
+	damage = 1.5,
+	speed = 1.1,
+
+	can_fire = projectile.needs_gunpowder,
+	on_cancel = projectile.return_gunpowder
+})
+
+--A flintlock weapon that fires bursts of shot, rather than individual musket balls.
+projectile.register_weapon("projectile:blunderbuss",  {
+	description = "Blunderbuss",
+	inventory_image = "projectile_blunderbuss.png",
+	inventory_image_2 = "projectile_blunderbuss.png",
+	inventory_image_3 = "projectile_blunderbuss_charged.png",
+	durability = 250,
+	rw_category = "flintlock_shot",
+	charge = true,
+	charge_time = 1,
+
+	can_fire = projectile.needs_gunpowder,
+	on_cancel = projectile.return_gunpowder
+})
 
 
---Register a projectile that can be fired by a weapon.
---Note that it also has to define what kind of weapon can fire it, and the item version of itself.
-function projectile.register_projectile(name, usable_by, ammo, def)
-	--First, check that a table exists for that particular weapon category. If not, make it.
-	projectile.registered_projectiles[usable_by] = projectile.registered_projectiles[usable_by] or {}
-	--Then, add this projectile to said table.
-	projectile.registered_projectiles[usable_by][ammo] = name
-
-	--Default initial properties for the projectile
-	--Including the table itself, if it wasn't already created.
-	def.initial_properties = def.initial_properties or {}
-	--The projectile is always physical. It has to hit stuff, after all.
-	def.initial_properties.physical = true
-	--The projectile also definitely has to be able to hit other entities.
-	def.initial_properties.collide_with_objects = true
-	--By default, the projectile's hitbox is half a block in size.
-	def.initial_properties.collisionbox = def.initial_properties.collisionbox or  {-.25, 0, -.25, .25, .5, .25}
-	--The projectile can't be hit by players.
-	def.initial_properties.pointable = false
-	--By default, the projectile is a flat image, provided by the "image" field.
-	def.initial_properties.visual = def.initial_properties.visual or "sprite"
-	def.initial_properties.textures = def.initial_properties.textures or {def.image}
-	--By default, the projectile's visual size is also half size.
-	def.initial_properties.visual_size = def.initial_properties.visual_size or {x = 0.5, y = 0.5, z = 0.5}
-	--The projectile should always have some kind of visual.
-	def.initial_properties.is_visible = true
-	--The projectile won't be saved if it becomes unloaded.
-	def.initial_properties.static_save = false
-
-	--During each of this entity's steps...
-	def.on_step = function(self, dtime, info)
-		--Let projectiles define their own on_step if they need to
-		if self._on_step then
-			self._on_step(self, dtime, info)
-		end
-
-		--A little shorthand
-		local selfo = self.object
-		--By default, assume nothing was hit this step.
-		local hit = false
-
-		--For each collision that was found...
-		for k, c in pairs(info.collisions) do
-			--If it's a node, don't do anything more than acknowledging that something was hit.
-			if c.type == "node" and minetest.get_node(c.node_pos).name ~= "default:glass" then
-				hit = true
-
-			--If it's an object...
-			else
-				--As long as that object isn't the player who fired this projectile...
-				if not (c.object:is_player() and self.owner == c.object:get_player_name()) then
-					hit = true
-					c.object:punch(selfo, 1, {full_punch_interval = 1, damage_groups = {fleshy = def.damage * self.level * self.damage}}, vector.normalize(selfo:get_velocity()))
-				end
-			end
-		end
-
-		--If this projectile hit something...
-		if hit then
-			--Grant the entity an on_impact function that it can define
-			if self.on_impact then
-				self:on_impact(info.collisions)
-			end
-
-			--Make the projectile destroy itself.
-			selfo:remove()
-		end
-	end
-
-	--Finally, register the entity.
-	minetest.register_entity(name, def)
-end
 
 --The basic slingshot projectile: rocks from hardtrees
 projectile.register_projectile("projectile:rock", "slingshot", "hardtrees:rock", {
@@ -437,22 +275,6 @@ projectile.register_projectile("projectile:obsidian", "slingshot", "default:obsi
 	speed = 25
 })
 
---A helper functions for arrows in general, as they rotate themselves according to how they move.
-local function arrow_on_step(self)
-	--Shorthand for velocity
-	local v = self.object:get_velocity()
-	--Set calculate rotation according to velocity
-	local rot = vector.dir_to_rotation(v)
-
-	--Define a timer for itself. Based on how fast its currently moving, and how far the timer has progressed,
-	--this makes it seem to spin through the air, with the tip still always pointing forward.
-	self.timer = (self.timer or 0) + (v.x + v.y + v.z) / 30
-	rot.z = rot.z + self.timer
-
-	--Apply the calculated rotation.
-	self.object:set_rotation(rot)
-end
-
 --The basic arrow, which has twice the power of a rock.
 projectile.register_projectile("projectile:arrow", "bow", "projectile:arrow", {
 	damage = 10,
@@ -464,7 +286,31 @@ projectile.register_projectile("projectile:arrow", "bow", "projectile:arrow", {
 		textures = {"projectile_arrow_texture.png"}
 	},
 
-	_on_step = arrow_on_step
+	_on_step = function(self, dtime)
+		projectile.autorotate_arrow(self, dtime)
+
+		if fire then
+			local selfo = self.object
+			local node = minetest.get_node(selfo:get_pos())
+
+			if minetest.get_item_group(node.name, "lava") > 0 or minetest.get_item_group(node.name, "fire") > 0 then
+				local arrow = minetest.add_entity(selfo:get_pos(), "projectile:arrow_fire")
+				local arrowlua = arrow:get_luaentity()
+
+				arrow:set_velocity(selfo:get_velocity())
+				arrow:set_acceleration(selfo:get_acceleration())
+				arrow:set_rotation(selfo:get_rotation())
+
+				arrowlua.level = self.level
+				arrowlua.damage = 12
+				arrowlua.owner = self.owner
+				arrowlua.oldvel = self.oldvel
+				arrowlua.timer = self.timer
+
+				selfo:remove()
+			end
+		end
+	end
 })
 
 --If the fire mod is present...
@@ -480,7 +326,29 @@ if fire then
 			textures = {"projectile_arrow_fire_texture.png"}
 		},
 
-		_on_step = arrow_on_step,
+		_on_step = function(self, dtime)
+			projectile.autorotate_arrow(self, dtime)
+
+			local selfo = self.object
+			local node = minetest.get_node(selfo:get_pos())
+
+			if minetest.get_item_group(node.name, "water") > 0 then
+				local arrow = minetest.add_entity(selfo:get_pos(), "projectile:arrow")
+				local arrowlua = arrow:get_luaentity()
+
+				arrow:set_velocity(selfo:get_velocity())
+				arrow:set_acceleration(selfo:get_acceleration())
+				arrow:set_rotation(selfo:get_rotation())
+
+				arrowlua.level = self.level
+				arrowlua.damage = 10
+				arrowlua.owner = self.owner
+				arrowlua.oldvel = self.oldvel
+				arrowlua.timer = self.timer
+
+				selfo:remove()
+			end
+		end,
 
 		--On impact...
 		on_impact = function(self, collisions)
@@ -507,7 +375,7 @@ projectile.register_projectile("projectile:arrow_high_velocity", "bow", "project
 		textures = {"projectile_arrow_high_velocity_texture.png"}
 	},
 
-	_on_step = arrow_on_step
+	_on_step = projectile.autorotate_arrow
 })
 
 --If the tnt mod is present...
@@ -525,7 +393,7 @@ if tnt then
 			textures = {"projectile_arrow_bomb_texture.png"}
 		},
 
-		_on_step = arrow_on_step,
+		_on_step = projectile.autorotate_arrow,
 
 		--Upon impact, create a small explosion.
 		on_impact = function(self, collisions)
@@ -533,3 +401,108 @@ if tnt then
 		end
 	})
 end
+
+--Basic flintlock ammunition with decent damage, and extremely high speed, and slight spread.
+projectile.register_projectile("projectile:musket_ball", "flintlock", "projectile:musket_ball", {
+	damage = 10,
+	speed = 250,
+	spread = 2.5,
+
+	image = "projectile_dot.png^[multiply:#AEAEAE"
+})
+
+--A weaker flintlock ammunition that bursts on impact, striking all enemies in a small radius.
+--Note that damage of the initial hit is set to 0 so that the radius damage doesn't cause this bullet to hit the same enemy twice.
+projectile.register_projectile("projectile:musket_ball_diamond", "flintlock", "projectile:musket_ball_diamond", {
+	damage = 0,
+	speed = 275,
+	spread = 5,
+
+	image = "projectile_dot.png^[multiply:#5AAFE7",
+
+	on_impact = function(self, collisions)
+		--Center the blast on the first node or object that the projectile hit.
+		local pos = collisions[1].node_pos or collisions[1].object:get_pos()
+
+		--For each object in a radius of 2.5 meters/nodes...
+		for _, target in pairs(minetest.get_objects_inside_radius(pos, 2.5)) do
+			--As long as this wouldn't be self-damage or friendly fire...
+			if not target:is_player() or (self.owner ~= target:get_player_name() and projectile.in_same_party(self, target)) then
+				--Punch that target for 6 damage.
+				--The direction is just 0, so affected targets won't be knocked anywhere.
+				--Instead, they'll just freeze in place for a moment.
+				target:punch(self.object, 1, {full_punch_interval = 1, damage_groups = {fleshy = 6}}, {x=0, y=0, z=0})
+			end
+		end
+
+		--Then, create 16 little particles.
+		for i = 1, 16 do
+			--ps = particle speed.
+			local ps = 25
+			--Make a completely random velocity for each particle.
+			local vel = {x = math.random(-ps, ps), y = math.random(-ps, ps), z = math.random(-ps, ps)}
+			--Multiply and normalize are used so that every particle has exactly 25 velocity
+			vel = vector.multiply(vector.normalize(vel), ps)
+
+			--Add the particle so that it lasts only long enough to travel 2.5 meters. Have it look like a smaller version of the bullet fired.
+			minetest.add_particle(pos, vel, {x=0, y=0, z=0}, 2.5 / ps, 1, false, "projectile_dot.png^[multiply:#5AAFE7")
+		end
+	end
+})
+
+--An upgrade to the musket ball that deals nearly double damage and is slightly faster and more accurate.
+projectile.register_projectile("projectile:musket_ball_mithril", "flintlock", "projectile:musket_ball_mithril", {
+	damage = 18,
+	speed = 300,
+	spread = 2,
+
+	image = "projectile_dot.png^[multiply:#8282D5"
+})
+
+--A standard shotgun blast, with smaller than average pellets that basically tickle enemies if only one or two land.
+projectile.register_projectile("projectile:shot_pile", "flintlock_shot", "projectile:shot_pile", {
+	damage = 3,
+	speed = 250,
+	count = 9,
+	spread = 22.5,
+	collide_self = false,
+
+	initial_properties = {
+		collisionbox = {-.125, 0, -.125, .125, .25, .125},
+		visual_size = {x = 0.25, y = 0.25, z = 0.25}
+	},
+
+	image = "projectile_dot.png^[multiply:#AEAEAE"
+})
+
+--A massive burst of shot that deals less damage at range, but much more damage up close. Has a lot wider spread as well.
+projectile.register_projectile("projectile:shot_pile_diamond", "flintlock_shot", "projectile:shot_pile_diamond", {
+	damage = 2,
+	speed = 275,
+	count = 18,
+	spread = 30,
+	collide_self = false,
+
+	initial_properties = {
+		collisionbox = {-.125, 0, -.125, .125, .25, .125},
+		visual_size = {x = 0.25, y = 0.25, z = 0.25}
+	},
+
+	image = "projectile_dot.png^[multiply:#5AAFE7"
+})
+
+--Stronger shot than steel with nearly double the damage and slightly better speed as well.
+projectile.register_projectile("projectile:shot_pile_mithril", "flintlock_shot", "projectile:shot_pile_mithril", {
+	damage = 5,
+	speed = 300,
+	count = 9,
+	spread = 22.5,
+	collide_self = false,
+
+	initial_properties = {
+		collisionbox = {-.125, 0, -.125, .125, .25, .125},
+		visual_size = {x = 0.25, y = 0.25, z = 0.25}
+	},
+
+	image = "projectile_dot.png^[multiply:#8282D5"
+})
