@@ -20,3 +20,6 @@ v1.1.0:
 		-Issues with weapons thinking they're still charged if the player leaves the game, even though they shouldn't be.
 		-Possible crash if a projectile ever called self.object:remove() in its _on_step function.
 		-Dead players will no longer block projectiles.
+
+v1.1.1:
+	Added optional support for my new node_damage mod. With it an tnt, bomb arrows will crack blocks just outside the destruction radius.
