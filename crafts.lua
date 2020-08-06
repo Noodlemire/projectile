@@ -17,6 +17,22 @@ License along with this library; if not, write to the Free Software
 Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301  USA
 --]]
 
+--Gun components
+if not (pipeworks or waterworks) then
+	minetest.register_craftitem("projectile:steel_pipe", {
+		description = "Steel Pipe",
+		inventory_image = "projectile_steel_pipe.png"
+	})
+end
+
+--Basic slingshot ammo
+if not hardtrees then
+	minetest.register_craftitem("projectile:rock", {
+		description = "Rock",
+		inventory_image = "projectile_rock.png"
+	})
+end
+
 --A basic arrow
 minetest.register_craftitem("projectile:arrow", {
 	description = "Arrow",
@@ -79,23 +95,43 @@ minetest.register_craftitem("projectile:shot_pile_mithril", {
 
 
 
---Two cobblestone blocks can shapelessly be used to craft 18 rocks.
---Two are used since it's very possible that other mods use one rock to make other things.
-minetest.register_craft({
-	type = "shapeless",
-	output = "hardtrees:rock 18",
-	recipe = {"default:cobble", "default:cobble"}
-})
+if hardtrees then
+	--Two cobblestone blocks can shapelessly be used to craft 18 rocks.
+	--Two are used since it's very possible that other mods use one rock to make other things.
+	minetest.register_craft({
+		type = "shapeless",
+		output = "hardtrees:rock 18",
+		recipe = {"default:cobble", "default:cobble"}
+	})
 
---If the player no longer needs rocks, 9 can be crafted back into a cobblestone block.
-minetest.register_craft({
-	output = "default:cobble",
-	recipe = {
-		{"hardtrees:rock", "hardtrees:rock", "hardtrees:rock"},
-		{"hardtrees:rock", "hardtrees:rock", "hardtrees:rock"},
-		{"hardtrees:rock", "hardtrees:rock", "hardtrees:rock"}
-	}
-})
+	--If the player no longer needs rocks, 9 can be crafted back into a cobblestone block.
+	minetest.register_craft({
+		output = "default:cobble",
+		recipe = {
+			{"hardtrees:rock", "hardtrees:rock", "hardtrees:rock"},
+			{"hardtrees:rock", "hardtrees:rock", "hardtrees:rock"},
+			{"hardtrees:rock", "hardtrees:rock", "hardtrees:rock"}
+		}
+	})
+else
+	--Two cobblestone blocks can shapelessly be used to craft 18 rocks.
+	--Two are used since it's very possible that other mods use one rock to make other things.
+	minetest.register_craft({
+		type = "shapeless",
+		output = "projectile:rock 18",
+		recipe = {"default:cobble", "default:cobble"}
+	})
+
+	--If the player no longer needs rocks, 9 can be crafted back into a cobblestone block.
+	minetest.register_craft({
+		output = "default:cobble",
+		recipe = {
+			{"projectile:rock", "projectile:rock", "projectile:rock"},
+			{"projectile:rock", "projectile:rock", "projectile:rock"},
+			{"projectile:rock", "projectile:rock", "projectile:rock"}
+		}
+	})
+end
 
 --Four sticks in a diagonal Y, with a string on top, makes a slingshot.
 minetest.register_craft({
@@ -139,33 +175,89 @@ minetest.register_craft({
 	}
 })
 
---Flintlocks are made from metal and steel, with a pipe segment for the barrel and a lever for the trigger.
-minetest.register_craft({
-	output = "projectile:flintlock_pistol",
-	recipe = {
-		{"pipeworks:pipe_1_empty", ""},
-		{"mesecons_walllever:wall_lever_off", "default:steel_ingot"},
-		{"group:stick", ""}
-	}
-})
+if pipeworks then
+	--Flintlocks are made from metal and steel, with a steel pipe for the barrel and a lever for the trigger.
+	minetest.register_craft({
+		output = "projectile:flintlock_pistol",
+		recipe = {
+			{"pipeworks:pipe_1_empty", ""},
+			{"basic_materials:steel_strip", "default:steel_ingot"},
+			{"group:stick", "default:flint"}
+		}
+	})
 
---Muskets add an extra barrel because they're long.
-minetest.register_craft({
-	output = "projectile:musket",
-	recipe = {
-		{"pipeworks:pipe_1_empty", "", ""},
-		{"", "pipeworks:pipe_1_empty", "default:steel_ingot"},
-		{"", "mesecons_walllever:wall_lever_off", "group:stick"}
-	}
-})
+	--Muskets add an extra pipe because they're long.
+	minetest.register_craft({
+		output = "projectile:musket",
+		recipe = {
+			{"pipeworks:pipe_1_empty", "", ""},
+			{"", "pipeworks:pipe_1_empty", "default:steel_ingot"},
+			{"basic_materials:steel_strip", "group:stick", "default:flint"}
+		}
+	})
+end
 
---Blunderbusses are thucker, so a second steel ingot is used in place of a pipe segment.
+if waterworks then
+	--Flintlocks are made from metal and steel, with a steel pipe for the barrel and a lever for the trigger.
+	minetest.register_craft({
+		output = "projectile:flintlock_pistol",
+		recipe = {
+			{"waterworks:pipe", ""},
+			{"basic_materials:steel_strip", "default:steel_ingot"},
+			{"group:stick", "default:flint"}
+		}
+	})
+
+	--Muskets add an extra pipe because they're long.
+	minetest.register_craft({
+		output = "projectile:musket",
+		recipe = {
+			{"waterworks:pipe", "", ""},
+			{"", "waterworks:pipe", "default:steel_ingot"},
+			{"basic_materials:steel_strip", "group:stick", "default:flint"}
+		}
+	})
+end
+
+if not (pipeworks or waterworks) then
+	--6 steel ingots in an = shape can make any kind of pipe.
+	minetest.register_craft({
+		output = "projectile:steel_pipe 12",
+		recipe = {
+			{"default:steel_ingot", "default:steel_ingot", "default:steel_ingot"},
+			{"", "", ""},
+			{"default:steel_ingot", "default:steel_ingot", "default:steel_ingot"}
+		}
+	})
+
+	--Flintlocks are made from metal and steel, with a steel pipe for the barrel and a lever for the trigger.
+	minetest.register_craft({
+		output = "projectile:flintlock_pistol",
+		recipe = {
+			{"projectile:steel_pipe", ""},
+			{"basic_materials:steel_strip", "default:steel_ingot"},
+			{"group:stick", "default:flint"}
+		}
+	})
+
+	--Muskets add an extra pipe because they're long.
+	minetest.register_craft({
+		output = "projectile:musket",
+		recipe = {
+			{"projectile:steel_pipe", "", ""},
+			{"", "projectile:steel_pipe", "default:steel_ingot"},
+			{"basic_materials:steel_strip", "group:stick", "default:flint"}
+		}
+	})
+end
+
+--Blunderbusses are thucker, so a second steel ingot is used in place of a steel pipe.
 minetest.register_craft({
 	output = "projectile:blunderbuss",
 	recipe = {
 		{"default:steel_ingot", ""},
-		{"mesecons_walllever:wall_lever_off", "default:steel_ingot"},
-		{"group:stick", ""}
+		{"basic_materials:steel_strip", "default:steel_ingot"},
+		{"group:stick", "default:flint"}
 	}
 })
 

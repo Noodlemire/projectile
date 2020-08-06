@@ -276,17 +276,19 @@ function projectile.shoot(wep, user, level)
 
 	--Look through each inventory slot...
 	for i = 1, inv:get_size("main") do
-		--get the stack itself
+		--Get the stack itself
 		local ammo = inv:get_stack("main", i)
+		--Get the name of the entity that will be created by this ammo type.
+		local ammo_entity = projectile.registered_projectiles[def.rw_category][ammo:get_name()]
 
 		--If there is an item stack, and it's registered as an ammo type that this weapon can use...
-		if not ammo:is_empty() and projectile.registered_projectiles[def.rw_category][ammo:get_name()] then
-			local adef = minetest.registered_entities[ammo:get_name()]
+		if not ammo:is_empty() and ammo_entity then
+			local adef = minetest.registered_entities[ammo_entity]
 
 			--Fire an amount of projectiles at once according to the ammo's defined "count".
 			for n = 1, (adef.count or 1) do
 				--Create the projectile entity at the determined position
-				local projectile = minetest.add_entity(pos, projectile.registered_projectiles[def.rw_category][ammo:get_name()])
+				local projectile = minetest.add_entity(pos, ammo_entity)
 				--A shorthand of the luaentity version of the projectile, where data can easily be stored
 				local luapro = projectile:get_luaentity()
 

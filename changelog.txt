@@ -23,3 +23,20 @@ v1.1.0:
 
 v1.1.1:
 	Added optional support for my new node_damage mod. With it an tnt, bomb arrows will crack blocks just outside the destruction radius.
+
+v1.1.2:
+	New:
+		+Waterworks support: waterworks pipes can be used as gun barrels in craft recipes
+		+screenshot.png
+
+	Made optional dependencies more optional:
+		+Craftable rocks are available if hardtrees isn't present
+		+Craftable steel pipes if both pipeworks and waterworks aren't present.
+		*Flintlock recipes now use steel strips and flint in place of mesecon wall levers.
+
+	Removed:
+		-Optional dependency on mesecons_walllever
+		-bugs.txt
+
+	Fixes:
+		-Slingshots crashing the game when used

@@ -224,12 +224,20 @@ projectile.register_weapon("projectile:blunderbuss",  {
 
 
 
---The basic slingshot projectile: rocks from hardtrees
-projectile.register_projectile("projectile:rock", "slingshot", "hardtrees:rock", {
-	image = "rock_lump.png",
-	damage = 5,
-	speed = 15
-})
+--The basic slingshot projectile: rocks, optionally the ones from hardtrees
+if hardtrees then
+	projectile.register_projectile("projectile:rock", "slingshot", "hardtrees:rock", {
+		image = "rock_lump.png",
+		damage = 5,
+		speed = 15
+	})
+else
+	projectile.register_projectile("projectile:rock", "slingshot", "projectile:rock", {
+		image = "projectile_rock.png",
+		damage = 5,
+		speed = 15
+	})
+end
 
 --A helper function for mese projectiles, to check if a particular node can be powered.
 local is_mesecon = function(pos)
