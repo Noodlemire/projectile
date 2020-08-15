@@ -485,19 +485,22 @@ if tnt then
 		--Upon impact, create a small explosion.
 		on_impact = function(self, collisions)
 			local pos = self.object:get_pos()
-			local r = 4
 
-			tnt.boom(self.object:get_pos(), {radius = 2, damage_radius = 2})
+			tnt.boom(pos, {radius = 2, damage_radius = 2})
 
-			for a = -r, r do
-				for b = -r, r do
-					for c = -r, r do
-						local npos = vector.add(pos, {x=a, y=b, z=c})
-						local dist = vector.distance(pos, npos)
-						local num = math.random(0, math.ceil(r / math.max(1, dist)))
+			if node_damage then
+				local r = 4
 
-						if dist <= r and num > 0 then
-							node_damage.damage(npos, nil, nil, num)
+				for a = -r, r do
+					for b = -r, r do
+						for c = -r, r do
+							local npos = vector.add(pos, {x=a, y=b, z=c})
+							local dist = vector.distance(pos, npos)
+							local num = math.random(0, math.ceil(r / math.max(1, dist)))
+
+							if dist <= r and num > 0 then
+								node_damage.damage(npos, nil, nil, num)
+							end
 						end
 					end
 				end
