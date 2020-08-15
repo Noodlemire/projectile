@@ -68,6 +68,14 @@ projectile.register_weapon(name, definition)
 	--Can't be used to negate the need for ammo.
 	--Defaults to always return true.
 
+	on_charge_begin = function(wep, user)
+	--This function is called just after the user right-clicks to start charging the weapon.
+	--Has no return value.
+
+	on_charge_full = function(wep, user)
+	--This function is called the moment that the weapon becomes fully charged.
+	--Has no return value.
+
 	on_cancel = function(weapon, user)
 	--This function is called whenever a charge is cut short, either by left-clicking, switching the selected hotbar index, or leaving the game.
 	--Has no return value.

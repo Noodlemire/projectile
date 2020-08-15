@@ -51,8 +51,14 @@ local function uncharge_player(player)
 		--Get the projectile weapon. get_wielded_item() can't be used, since the weapon may no longer be held.
 		local wep = player:get_inventory():get_stack("main", old_slot)
 
-		--Call the weapon's on_use function, which will cancel it.
-		wep:get_definition().on_use(wep, player, true)
+		--If the weapon was /pulverized or otherwise deleted without triggering a callback...
+		if wep:is_empty() then
+			--Delete the entry directly, which normally happens inside the weapon's on_use function.
+			projectile.charge_levels[pname] = nil
+		else
+			--Call the weapon's on_use function, which will cancel it.
+			wep:get_definition().on_use(wep, player, true)
+		end
 
 		--Update the player's inventory with any modifications.
 		player:get_inventory():set_stack("main", old_slot, wep)
@@ -68,8 +74,8 @@ minetest.register_globalstep(function(dtime)
 
 		--If this player is currently charging a projectile weapon...
 		if projectile.charge_levels[pname] then
-			--If the player's selected hotbar slot changed...
-			if player:get_wield_index() ~= projectile.charge_levels[pname].slot then
+			--If the player's selected hotbar slot changed or their weapon was deleted somehow...
+			if player:get_wield_index() ~= projectile.charge_levels[pname].slot or player:get_wielded_item():is_empty() then
 				--Cancel their charge.
 				uncharge_player(player)
 
@@ -88,6 +94,11 @@ minetest.register_globalstep(function(dtime)
 					--Once this happens, replace the weapon with a fully charged sprite version.
 					wep:set_name(def.full_charge_name)
 					player:set_wielded_item(wep)
+
+					--Enable a callback that can occur when the weapon is fully charged
+					if def.on_charge_full then
+						def.on_charge_full(wep, player)
+					end
 				end
 			end
 		end
@@ -129,7 +140,15 @@ projectile.register_weapon("projectile:slingshot",  {
 	durability = 75,
 	rw_category = "slingshot",
 	charge = true,
-	fire_while_charging = true
+	fire_while_charging = true,
+
+	on_charge_begin = function(wep, user)
+		projectile.charge_levels[user:get_player_name()].sound = minetest.sound_play("projectile_slingshot_drawn_adam-n", {gain = 1.0, object = user})
+	end,
+
+	after_fire = function(wep, user)
+		minetest.sound_play("projectile_bow_release_porkmuncher", {gain = 1.0, pos = user:get_pos()}, true)
+	end
 })
 
 --An upgraded slingshot, which fires faster and harder, but is slightly harder to charge up. Metal wire is stiffer than string, after all.
@@ -144,7 +163,15 @@ projectile.register_weapon("projectile:steel_slingshot",  {
 	fire_while_charging = true,
 	charge_time = 1.1,
 	damage = 1.25,
-	speed = 1.75
+	speed = 1.75,
+
+	on_charge_begin = function(wep, user)
+		projectile.charge_levels[user:get_player_name()].sound = minetest.sound_play("projectile_slingshot_drawn_adam-n", {gain = 1.0, object = user})
+	end,
+
+	after_fire = function(wep, user)
+		minetest.sound_play("projectile_bow_release_porkmuncher", {gain = 1.0, pos = user:get_pos()}, true)
+	end
 })
 
 --The basic bow. It is more powerful than a slingshot, but it takes way longer to charge and ammunition is harder to get.
@@ -157,7 +184,15 @@ projectile.register_weapon("projectile:bow",  {
 	rw_category = "bow",
 	charge = true,
 	fire_while_charging = true,
-	charge_time = 2
+	charge_time = 2,
+
+	on_charge_begin = function(wep, user)
+		projectile.charge_levels.sound = minetest.sound_play("projectile_bow_drawn_paveroux", {gain = 1.0, object = user})
+	end,
+
+	after_fire = function(wep, user)
+		minetest.sound_play("projectile_bow_release_porkmuncher", {gain = 1.0, pos = user:get_pos()}, true)
+	end
 })
 
 --An upgraded bow, which fires faster and harder, but is slightly harder to charge up. Metal wire is stiffer than string, after all.
@@ -172,7 +207,15 @@ projectile.register_weapon("projectile:steel_bow",  {
 	fire_while_charging = true,
 	charge_time = 2.1,
 	damage = 1.5,
-	speed = 1.9
+	speed = 1.9,
+
+	on_charge_begin = function(wep, user)
+		projectile.charge_levels[user:get_player_name()].sound = minetest.sound_play("projectile_bow_drawn_paveroux", {gain = 1.0, object = user})
+	end,
+
+	after_fire = function(wep, user)
+		minetest.sound_play("projectile_bow_release_porkmuncher", {gain = 1.0, pos = user:get_pos()}, true)
+	end
 })
 
 --The basic flintlock weapon, which can fire fairly often and has fair damage, but can't be fired before it is fully loaded.
@@ -187,7 +230,19 @@ projectile.register_weapon("projectile:flintlock_pistol",  {
 	charge_time = 0.667,
 
 	can_fire = projectile.needs_gunpowder,
-	on_cancel = projectile.return_gunpowder
+	on_cancel = projectile.return_gunpowder,
+
+	on_charge_begin = function(wep, user)
+		minetest.sound_play("projectile_metal_click_mkoenig", {gain = 1.0, pos = user:get_pos()}, true)
+	end,
+
+	on_charge_full = function(wep, user)
+		minetest.sound_play("projectile_metal_click_mkoenig", {gain = 1.0, pos = user:get_pos()}, true)
+	end,
+
+	after_fire = function(wep, user)
+		minetest.sound_play("projectile_musket_shot_aaronsiler", {gain = 0.75, pos = user:get_pos(), max_hear_distance = 48}, true)
+	end,
 })
 
 --A slowler, more powerful flintlock weapon.
@@ -204,7 +259,19 @@ projectile.register_weapon("projectile:musket",  {
 	speed = 1.1,
 
 	can_fire = projectile.needs_gunpowder,
-	on_cancel = projectile.return_gunpowder
+	on_cancel = projectile.return_gunpowder,
+
+	on_charge_begin = function(wep, user)
+		minetest.sound_play("projectile_metal_click_mkoenig", {gain = 1.0, pos = user:get_pos()}, true)
+	end,
+
+	on_charge_full = function(wep, user)
+		minetest.sound_play("projectile_metal_click_mkoenig", {gain = 1.0, pos = user:get_pos()}, true)
+	end,
+
+	after_fire = function(wep, user)
+		minetest.sound_play("projectile_musket_shot_aaronsiler", {gain = 1.0, pos = user:get_pos(), max_hear_distance = 96}, true)
+	end,
 })
 
 --A flintlock weapon that fires bursts of shot, rather than individual musket balls.
@@ -219,7 +286,19 @@ projectile.register_weapon("projectile:blunderbuss",  {
 	charge_time = 1,
 
 	can_fire = projectile.needs_gunpowder,
-	on_cancel = projectile.return_gunpowder
+	on_cancel = projectile.return_gunpowder,
+
+	on_charge_begin = function(wep, user)
+		minetest.sound_play("projectile_metal_click_mkoenig", {gain = 1.0, pos = user:get_pos()}, true)
+	end,
+
+	on_charge_full = function(wep, user)
+		minetest.sound_play("projectile_metal_click_mkoenig", {gain = 1.0, pos = user:get_pos()}, true)
+	end,
+
+	after_fire = function(wep, user)
+		minetest.sound_play("projectile_musket_shot_aaronsiler", {gain = 1.0, pos = user:get_pos(), max_hear_distance = 96}, true)
+	end,
 })
 
 

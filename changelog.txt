@@ -40,3 +40,14 @@ v1.1.2:
 
 	Fixes:
 		-Slingshots crashing the game when used
+
+v1.1.3:
+	New:
+		+Added sounds for weapons being charged and fired, and for projectiles impacting nodes. 
+		*Charging and firing sounds come from freesound.org, so their file names include the names of the original uploaders of these sounds.
+		+Added on_charge_begin and on_charge_full callbacks to the api
+		+A second optional feature when using with the node_damage mod, where projectiles damage nodes that they impact.
+		*The above option is disabled by default, even with node_damage included, because it can be annoying, especially with shotguns.
+
+	Fixes:
+		-A crash that could occur from pulverizing a charging weapon.

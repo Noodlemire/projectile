@@ -44,6 +44,10 @@ function projectile.register_weapon(name, def)
 				def.on_cancel(wep, user)
 			end
 
+			if projectile.charge_levels[user:get_player_name()] and projectile.charge_levels[user:get_player_name()].sound then
+				minetest.sound_stop(projectile.charge_levels[user:get_player_name()].sound)
+			end
+
 			--Delete charge data.
 			projectile.charge_levels[user:get_player_name()] = nil
 
@@ -77,6 +81,11 @@ function projectile.register_weapon(name, def)
 							--I originally wanted the item to be shown loaded with specific ammo, but it doesn't seem to be possible.
 							wep = ItemStack({name = name.."_2", wear = wep:get_wear()})
 
+							--If a callback is defined to do something when a charge begins, call it now.
+							if def.on_charge_begin then
+								def.on_charge_begin(wep, user)
+							end
+
 							--Once ammo is found, the search can be stopped.
 							break
 						end
@@ -86,6 +95,7 @@ function projectile.register_weapon(name, def)
 
 				--Otherwise, if there is charge data...
 				else
+					--If a callback is defined to do something right before firing, call it now.
 					if def.on_fire then
 						def.on_fire(wep, user)
 					end
@@ -93,6 +103,7 @@ function projectile.register_weapon(name, def)
 					--Shoot out the projectile
 					projectile.shoot(wep, user, projectile.charge_levels[pname].charge)
 
+					--If a callback is defined to do something right after firing, call it now.
 					if def.after_fire then
 						def.after_fire(wep, user)
 					end
@@ -219,6 +230,14 @@ function projectile.register_projectile(name, usable_by, ammo, def)
 			if c.type == "node" then
 				hit = true
 
+				--Get the definition of the node that was hit...
+				local ndef = minetest.registered_nodes[minetest.get_node(c.node_pos).name]
+				--If the definition exists and defines a sound for being dug...
+				if ndef and ndef.sounds and ndef.sounds.dug then
+					--Play that sound
+					minetest.sound_play(ndef.sounds.dug, {gain = 1.0, pos = c.node_pos}, true)
+				end
+
 			--If it's an object...
 			else
 				--As long as that object isn't the player who fired this projectile and the target isn't already dead...
@@ -243,6 +262,15 @@ function projectile.register_projectile(name, usable_by, ammo, def)
 			--Grant the entity an on_impact function that it can define
 			if self.on_impact then
 				self:on_impact(info.collisions)
+			end
+
+			if node_damage and minetest.settings:get_bool("placeable_impacts_damage_nodes") then
+				for _, c in pairs(info.collisions) do
+					if c.type == "node" then
+						node_damage.damage(c.node_pos)
+						break
+					end
+				end
 			end
 
 			--Make the projectile destroy itself.
